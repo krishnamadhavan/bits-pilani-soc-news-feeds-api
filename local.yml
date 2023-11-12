@@ -1,0 +1,58 @@
+version: '3'
+
+volumes:
+  news_feeds_api_local_postgres_data: {}
+  news_feeds_api_local_postgres_data_backups: {}
+
+services:
+  django:
+    build:
+      context: .
+      dockerfile: ./compose/local/django/Dockerfile
+    image: news_feeds_api_local_django
+    container_name: news_feeds_api_local_django
+    depends_on:
+      - postgres
+      - mailpit
+    volumes:
+      - .:/app:z
+    env_file:
+      - ./.envs/.local/.django
+      - ./.envs/.local/.postgres
+    ports:
+      - '8000:8000'
+    command: /start
+
+  postgres:
+    build:
+      context: .
+      dockerfile: ./compose/production/postgres/Dockerfile
+    image: news_feeds_api_production_postgres
+    container_name: news_feeds_api_local_postgres
+    volumes:
+      - news_feeds_api_local_postgres_data:/var/lib/postgresql/data
+      - news_feeds_api_local_postgres_data_backups:/backups
+    env_file:
+      - ./.envs/.local/.postgres
+
+  docs:
+    image: news_feeds_api_local_docs
+    container_name: news_feeds_api_local_docs
+    build:
+      context: .
+      dockerfile: ./compose/local/docs/Dockerfile
+    env_file:
+      - ./.envs/.local/.django
+    volumes:
+      - ./docs:/docs:z
+      - ./config:/app/config:z
+      - ./news_feeds_api:/app/news_feeds_api:z
+    ports:
+      - '9000:9000'
+    command: /start-docs
+
+  mailpit:
+    image: axllent/mailpit:v1.8
+    container_name: news_feeds_api_local_mailpit
+    ports:
+      - "8025:8025"
